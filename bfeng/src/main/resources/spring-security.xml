@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+	xmlns:beans="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+      http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+      http://www.springframework.org/schema/security
+      http://www.springframework.org/schema/security/spring-security-4.1.xsd ">
+
+	<http pattern="/home/index" security="none" />
+	<!-- Spring-Security 的配置 -->
+	<!-- 注意开启use-expressions.表示开启表达式. -->
+	<http auto-config="true" use-expressions="true">
+		<access-denied-handler error-page="/home/index" />
+		<intercept-url pattern="/home/common" access="hasRole('ROLE_USER')" />
+		<intercept-url pattern="/home/admin" access="hasRole('ROLE_ADMIN')" />
+		<form-login login-page="/home/index" login-processing-url="/login"
+			authentication-failure-url="/home/failure" default-target-url="/home/success"
+			username-parameter="username" password-parameter="password" />
+		<session-management
+			session-authentication-error-url="/home/index" invalid-session-url="/home/index">
+			<!-- max-sessions只容许一个账号登录，error-if-maximum-exceeded 后面账号登录后踢出前一个账号，expired-url 
+				session过期跳转界面 -->
+			<concurrency-control max-sessions="1"
+				expired-url="/home/index" session-registry-ref="sessionRegistry" />
+		</session-management>
+		<!-- 
+		<remember-me key="elim" user-service-ref="userDetailsService"/> -->
+		<logout invalidate-session="true" logout-success-url="/home/exit"
+			logout-url="/home/logout" delete-cookies="JSESSIONID" />
+		<csrf disabled="true" />
+		<headers>
+			<frame-options policy="SAMEORIGIN" />
+		</headers>
+	</http>
+
+	<!-- 指定一个自定义的authentication-manager :customUserDetailsService -->
+	<authentication-manager >  
+        <authentication-provider ref="authenticationProvider" />  
+    </authentication-manager>  
+  
+    <!-- 自定义userDetailsService， 盐值加密 -->  
+    <beans:bean id="authenticationProvider" class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">  
+        <beans:property name="userDetailsService" ref="userDetailService" />  
+        <beans:property name="passwordEncoder" ref="myPasswordEncode" />  
+    </beans:bean>
+    
+  	<beans:bean id="userDetailService" class="cn.bfeng.service.impl.CustomUserDetailServiceImpl" />
+
+    <!-- Md5加密 -->  
+    <beans:bean id="myPasswordEncode" class="cn.bfeng.util.MyPasswordEncode" /> 
+  
+	<beans:bean id="csrfTokenRepository"
+		class="org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository">
+		<beans:property name="headerName" value="X-XSRF-TOKEN" />
+	</beans:bean>
+
+	<beans:bean id="sessionRegistry"
+		class="org.springframework.security.core.session.SessionRegistryImpl" />
+</beans:beans>
